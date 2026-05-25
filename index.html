@@ -35,7 +35,6 @@
             align-items: center;
         }
 
-        /* Адаптивні кнопки для ПК, на телефонах робимо їх менш помітними */
         .nav-btn {
             position: absolute; 
             top: 0; 
@@ -109,14 +108,16 @@
         const windowWidth = $(window).width();
         const windowHeight = $(window).height();
         
-        // На мобільних забираємо 100% ширини, на ПК лишаємо мікро-відступи
         let containerWidth = windowWidth < 768 ? windowWidth : windowWidth * 0.96;
         let containerHeight = windowHeight;
         
+        // Якщо iframe спочатку завантажився криво (з нульовою висотою) — даємо йому базові підстрахувальні розміри
+        if (containerWidth <= 0) containerWidth = 800;
+        if (containerHeight <= 0) containerHeight = 450;
+        
         let width = containerWidth;
-        let height = width * (1080 / 1920); // Базове співвідношення 16:9
+        let height = width * (1080 / 1920);
 
-        // Якщо висота за пропорцією виходить більшою за екран, підганяємо по висоті
         if (height > containerHeight) {
             height = containerHeight;
             width = height * (1920 / 1080);
@@ -156,6 +157,12 @@
         $(document).keydown(function(e) {
             if (e.keyCode == 37) book.turn("previous");
             else if (e.keyCode == 39) book.turn("next");
+        });
+        
+        // --- ГОЛОВНЕ ВИПРАВЛЕННЯ ДЛЯ IFRAME ---
+        // Коли все повністю завантажиться всередині iframe, ми робимо примусовий ресайз ще раз
+        $(window).on('load', function() {
+            setTimeout(resizeBook, 150);
         });
     });
 
