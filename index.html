@@ -2,8 +2,8 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Книга пам'яті - Виправлений порядок</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Книга пам'яті</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/turn.js/3/turn.min.js"></script>
 
@@ -35,49 +35,46 @@
             align-items: center;
         }
 
-        /* Кнопки навігації (на весь екран по боках) */
+        /* Адаптивні кнопки для ПК, на телефонах робимо їх менш помітними */
         .nav-btn {
             position: absolute; 
             top: 0; 
             height: 100%; 
-            width: 8%;
-            background: rgba(0, 0, 0, 0.2); 
+            width: 10%;
+            background: transparent; 
             border: none;
-            color: rgba(255, 255, 255, 0.4); 
-            font-size: 3rem;
+            color: rgba(255, 255, 255, 0.2); 
+            font-size: 2.5rem;
             cursor: pointer; 
             z-index: 1000; 
             transition: 0.3s;
             display: flex; 
             align-items: center; 
             justify-content: center;
+            -webkit-tap-highlight-color: transparent;
         }
-        .nav-btn:hover { 
-            background: rgba(0, 0, 0, 0.5); 
-            color: gold; 
+        
+        @media (max-width: 768px) {
+            .nav-btn { width: 12%; font-size: 1.8rem; color: rgba(255, 255, 255, 0.4); }
         }
+        
+        .nav-btn:hover { color: gold; }
         #prev-btn { left: 0; }
         #next-btn { right: 0; }
 
-        /* --- ГЛАВНЕ ВИПРАВЛЕННЯ СТИЛІВ СТОРІНОК --- */
-        
         #flipbook {
             margin: 0 auto;
         }
 
-        /* Тепер кожна сторінка — це ОДИН ЦІЛИЙ розворот (картинка 16:9) */
         .single-spread { 
-            background-color: #222; 
-            background-size: contain; /* Картинка заповнює всю сторінку, зберігаючи пропорції */
+            background-color: #111; 
+            background-size: contain; 
             background-repeat: no-repeat;
             background-position: center;
             width: 100%; 
             height: 100%;
         }
 
-        /* Прибираємо старі стилі для page-left та page-right, вони більше не потрібні */
-
-        /* Прибираємо тіні закриття книги */
         .turn-page-shadow { display: none !important; }
     </style>
 </head>
@@ -85,17 +82,13 @@
 
 <div id="viewport">
     <button class="nav-btn" id="prev-btn">❮</button>
-    
     <div id="flipbook-container">
-        <div id="flipbook">
-            </div>
+        <div id="flipbook"></div>
     </div>
-
     <button class="nav-btn" id="next-btn">❯</button>
 </div>
 
 <script>
-    // Посилання на зображення (кожна картинка — це готовий розворот 16:9)
     const imageUrls = [
         "https://firebasestorage.googleapis.com/v0/b/discord-py-ems-db.firebasestorage.app/o/1.png?alt=media&token=0f6a710f-03a7-4b9a-8a33-57eb53f3d41d",
         "https://firebasestorage.googleapis.com/v0/b/discord-py-ems-db.firebasestorage.app/o/2.png?alt=media&token=d74e1186-1260-440c-9303-22ee6aeed919",
@@ -113,14 +106,17 @@
     const book = $("#flipbook");
 
     function getBookSize() {
-        // Заповнюємо 100% простору iframe
-        const containerWidth = $(window).width() * 0.98;
-        const containerHeight = $(window).height();
+        const windowWidth = $(window).width();
+        const windowHeight = $(window).height();
+        
+        // На мобільних забираємо 100% ширини, на ПК лишаємо мікро-відступи
+        let containerWidth = windowWidth < 768 ? windowWidth : windowWidth * 0.96;
+        let containerHeight = windowHeight;
         
         let width = containerWidth;
-        let height = width * (1080 / 1920); // Співвідношення сторін розвороту (16:9)
+        let height = width * (1080 / 1920); // Базове співвідношення 16:9
 
-        // Якщо за висотою не влазить в iframe, масштабуємо по висоті
+        // Якщо висота за пропорцією виходить більшою за екран, підганяємо по висоті
         if (height > containerHeight) {
             height = containerHeight;
             width = height * (1920 / 1080);
@@ -137,11 +133,6 @@
     }
 
     $(document).ready(function() {
-        
-        // --- ГЛАВНЕ ВИПРАВЛЕННЯ ГЕНЕРАЦІЇ СТОРІНОК ---
-        
-        // Ми більше не ріжемо картинку. 
-        // Ми створюємо ОДНУ сторінку для КОЖНОГО розвороту.
         imageUrls.forEach(url => {
             const spread = $('<div class="single-spread"></div>').css('background-image', `url(${url})`);
             book.append(spread);
@@ -149,23 +140,16 @@
 
         const initialSize = getBookSize();
 
-        // 2. Ініціалізація Turn.js з новими параметрами
         book.turn({
             width: initialSize.width,
             height: initialSize.height,
-            
-            // --- ГЛАВНІ ЗМІНИ ПАРАМЕТРІВ ---
-            display: 'single', // Показувати тільки одну сторінку за раз (тобто один розворот)
-            autoCenter: true,   // Тепер це потрібно, щоб розворот центрувався на весь екран
-            
+            display: 'single', 
+            autoCenter: true,
             acceleration: true,
             gradients: true,
             elevation: 50
         });
 
-        // Блокування виходу за межі більше не потрібне, Turn.js сам зупиниться на останньому розвороті.
-
-        // Керування кнопками
         $("#prev-btn").click(() => book.turn("previous"));
         $("#next-btn").click(() => book.turn("next"));
         
