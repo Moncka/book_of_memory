@@ -134,14 +134,19 @@
     }
 
     $(document).ready(function() {
-        // 1. Створюємо контейнери (використовуємо custom-page для безпеки)
+        // ДОДАНО: Створюємо масив для зберігання об'єктів сторінок
+        const pageElements = []; 
+
         imageUrls.forEach((url, index) => {
-            const spread = $(`<div class="single-spread" id="custom-page-${index}"></div>`);
+            // ID більше не потрібне, ми зберігаємо пряме посилання на елемент
+            const spread = $('<div class="single-spread"></div>');
             
-            // Завантажуємо фон тільки для першої сторінки
             if (index === 0) {
                 spread.css('background-image', `url(${url})`);
             }
+            
+            // ДОДАНО: Зберігаємо об'єкт у масив
+            pageElements.push(spread); 
             book.append(spread);
         });
 
@@ -165,14 +170,15 @@
             else if (e.keyCode == 39) book.turn("next");
         });
 
-        // 2. Відкладене послідовне завантаження інших сторінок
+        // Відкладене послідовне завантаження
         async function loadImagesSequentially() {
             for (let i = 1; i < imageUrls.length; i++) {
                 await new Promise((resolve) => {
                     const img = new Image();
                     img.src = imageUrls[i];
                     img.onload = () => {
-                        $(`#custom-page-${i}`).css('background-image', `url(${imageUrls[i]})`);
+                        // ЗМІНЕНО: Звертаємось до елемента напряму з масиву в пам'яті
+                        pageElements[i].css('background-image', `url(${imageUrls[i]})`);
                         resolve(); 
                     };
                     img.onerror = () => {
@@ -185,12 +191,9 @@
         
         loadImagesSequentially();
 
-        // 3. НОВИЙ СПОСІБ РЕСАЙЗУ (замість window.onload)
-        // ResizeObserver безперервно і точно слідкує за розміром екрану/iframe
         const viewportElement = document.getElementById('viewport');
         if (viewportElement) {
             const resizeObserver = new ResizeObserver(() => {
-                // Використовуємо requestAnimationFrame для плавності
                 requestAnimationFrame(() => {
                     resizeBook();
                 });
@@ -198,7 +201,6 @@
             resizeObserver.observe(viewportElement);
         }
 
-        // Залишаємо стандартний resize як резервний
         $(window).resize(resizeBook);
     });
 </script>
