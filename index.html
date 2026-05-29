@@ -99,7 +99,8 @@
         "https://firebasestorage.googleapis.com/v0/b/discord-py-ems-db.firebasestorage.app/o/8.png?alt=media&token=d96fc491-a5c2-47c3-b75c-c26c5c2c701a",
         "https://firebasestorage.googleapis.com/v0/b/discord-py-ems-db.firebasestorage.app/o/9.png?alt=media&token=35200d79-62f4-4b83-b491-fd3ba6e055f3",
         "https://firebasestorage.googleapis.com/v0/b/discord-py-ems-db.firebasestorage.app/o/10.png?alt=media&token=bee79d46-3a01-4ff9-94de-86062e5cbfec",
-        "https://firebasestorage.googleapis.com/v0/b/discord-py-ems-db.firebasestorage.app/o/11.png?alt=media&token=dbb27aa7-3de7-4adc-8d71-35f7100d11c0"
+        "https://firebasestorage.googleapis.com/v0/b/discord-py-ems-db.firebasestorage.app/o/11.png?alt=media&token=dbb27aa7-3de7-4adc-8d71-35f7100d11c0",
+        "https://firebasestorage.googleapis.com/v0/b/discord-py-ems-db.firebasestorage.app/o/12.png?alt=media&token=1181b184-6e3f-402c-b78a-b09abab3a900"
     ];
 
     const book = $("#flipbook");
@@ -111,7 +112,6 @@
         let containerWidth = windowWidth < 768 ? windowWidth : windowWidth * 0.96;
         let containerHeight = windowHeight;
         
-        // Якщо iframe спочатку завантажився криво (з нульовою висотою) — даємо йому базові підстрахувальні розміри
         if (containerWidth <= 0) containerWidth = 800;
         if (containerHeight <= 0) containerHeight = 450;
         
@@ -134,8 +134,14 @@
     }
 
     $(document).ready(function() {
-        imageUrls.forEach(url => {
-            const spread = $('<div class="single-spread"></div>').css('background-image', `url(${url})`);
+        // 1. Створюємо контейнери для сторінок
+        imageUrls.forEach((url, index) => {
+            const spread = $(`<div class="single-spread" id="page-${index}"></div>`);
+            
+            // Встановлюємо фон ТІЛЬКИ для першої сторінки відразу
+            if (index === 0) {
+                spread.css('background-image', `url(${url})`);
+            }
             book.append(spread);
         });
 
@@ -158,9 +164,33 @@
             if (e.keyCode == 37) book.turn("previous");
             else if (e.keyCode == 39) book.turn("next");
         });
+
+        // 2. Асинхронна функція для послідовного завантаження
+        async function loadImagesSequentially() {
+            // Починаємо з індексу 1, бо 0 (перша сторінка) вже завантажується
+            for (let i = 1; i < imageUrls.length; i++) {
+                await new Promise((resolve) => {
+                    const img = new Image();
+                    img.src = imageUrls[i];
+                    
+                    // Коли картинка повністю завантажилась у фоні
+                    img.onload = () => {
+                        $(`#page-${i}`).css('background-image', `url(${imageUrls[i]})`);
+                        resolve(); // Переходимо до наступної ітерації циклу
+                    };
+                    
+                    // Якщо сталася помилка завантаження (щоб черга не зупинилась назавжди)
+                    img.onerror = () => {
+                        console.error(`Помилка завантаження зображення ${i}`);
+                        resolve(); 
+                    };
+                });
+            }
+        }
+
+        // Запускаємо процес фонового завантаження
+        loadImagesSequentially();
         
-        // --- ГОЛОВНЕ ВИПРАВЛЕННЯ ДЛЯ IFRAME ---
-        // Коли все повністю завантажиться всередині iframe, ми робимо примусовий ресайз ще раз
         $(window).on('load', function() {
             setTimeout(resizeBook, 150);
         });
