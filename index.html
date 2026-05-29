@@ -134,11 +134,11 @@
     }
 
     $(document).ready(function() {
-        // 1. Створюємо контейнери для сторінок
+        // 1. Створюємо контейнери (використовуємо custom-page для безпеки)
         imageUrls.forEach((url, index) => {
-            const spread = $(`<div class="single-spread" id="page-${index}"></div>`);
+            const spread = $(`<div class="single-spread" id="custom-page-${index}"></div>`);
             
-            // Встановлюємо фон ТІЛЬКИ для першої сторінки відразу
+            // Завантажуємо фон тільки для першої сторінки
             if (index === 0) {
                 spread.css('background-image', `url(${url})`);
             }
@@ -165,21 +165,16 @@
             else if (e.keyCode == 39) book.turn("next");
         });
 
-        // 2. Асинхронна функція для послідовного завантаження
+        // 2. Відкладене послідовне завантаження інших сторінок
         async function loadImagesSequentially() {
-            // Починаємо з індексу 1, бо 0 (перша сторінка) вже завантажується
             for (let i = 1; i < imageUrls.length; i++) {
                 await new Promise((resolve) => {
                     const img = new Image();
                     img.src = imageUrls[i];
-                    
-                    // Коли картинка повністю завантажилась у фоні
                     img.onload = () => {
-                        $(`#page-${i}`).css('background-image', `url(${imageUrls[i]})`);
-                        resolve(); // Переходимо до наступної ітерації циклу
+                        $(`#custom-page-${i}`).css('background-image', `url(${imageUrls[i]})`);
+                        resolve(); 
                     };
-                    
-                    // Якщо сталася помилка завантаження (щоб черга не зупинилась назавжди)
                     img.onerror = () => {
                         console.error(`Помилка завантаження зображення ${i}`);
                         resolve(); 
@@ -187,16 +182,25 @@
                 });
             }
         }
-
-        // Запускаємо процес фонового завантаження
-        loadImagesSequentially();
         
-        $(window).on('load', function() {
-            setTimeout(resizeBook, 150);
-        });
-    });
+        loadImagesSequentially();
 
-    $(window).resize(resizeBook);
+        // 3. НОВИЙ СПОСІБ РЕСАЙЗУ (замість window.onload)
+        // ResizeObserver безперервно і точно слідкує за розміром екрану/iframe
+        const viewportElement = document.getElementById('viewport');
+        if (viewportElement) {
+            const resizeObserver = new ResizeObserver(() => {
+                // Використовуємо requestAnimationFrame для плавності
+                requestAnimationFrame(() => {
+                    resizeBook();
+                });
+            });
+            resizeObserver.observe(viewportElement);
+        }
+
+        // Залишаємо стандартний resize як резервний
+        $(window).resize(resizeBook);
+    });
 </script>
 
 </body>
